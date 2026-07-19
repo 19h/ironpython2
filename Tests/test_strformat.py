@@ -3,6 +3,7 @@
 # See the LICENSE file in the project root for more information.
 
 import sys
+import string
 import unittest
 
 from iptest import IronPythonTestCase, is_cli, is_cpython, is_netcoreapp21, run_test, skipUnlessIronPython
@@ -499,7 +500,7 @@ class StrFormatTest(IronPythonTestCase):
                 (10e667/10e667,    '',         'nan'),
                 ]
 
-        upper_spec_trans = str.maketrans({"f": "F", "e": "E", "g": "G"})
+        upper_spec_trans = string.maketrans("feg", "FEG")
 
         for value, spec, result in tests:
             self.assertEqual(value.__format__(spec), result)

@@ -137,7 +137,16 @@ function GenerateRunSettings([String] $framework, [String] $platform, [String] $
 }
 
 function Test([String] $target, [String] $configuration, [String[]] $frameworks, [String] $platform) {
-    foreach ($framework in $frameworks) {
+    $previousLang = $env:LANG
+    $previousLcAll = $env:LC_ALL
+    if($global:isUnix) {
+        # The suite's CLR parsing assertions use a dot as the decimal separator.
+        $env:LANG = "en_US.UTF-8"
+        $env:LC_ALL = "en_US.UTF-8"
+    }
+
+    try {
+      foreach ($framework in $frameworks) {
         $testname = "";
         $filtername = $target
 
@@ -192,6 +201,10 @@ function Test([String] $target, [String] $configuration, [String[]] $frameworks,
         if($LastExitCode -ne 0) {
             $global:Result = $LastExitCode
         }
+      }
+    } finally {
+        $env:LANG = $previousLang
+        $env:LC_ALL = $previousLcAll
     }
 }
 

@@ -46,6 +46,13 @@
 
   <ItemGroup Condition=" '$(IsFullFramework)' != 'true' ">
     <LateStageItem Include="$(TargetDir)\%2A%2A\%2A.runtimeconfig.json" />
+    <LateStageItem Include="$(TargetDir)\ipy.deps.json" />
+    <LateStageItem Include="$(TargetDir)\IronPython.dll" />
+    <LateStageItem Include="$(TargetDir)\IronPython.xml" />
+    <LateStageItem Include="$(TargetDir)\IronPython.Modules.dll" />
+    <LateStageItem Include="$(TargetDir)\Microsoft.Scripting.Metadata.dll" />
+    <LateStageItem Include="$(TargetDir)\Microsoft.Scripting.Metadata.xml" />
+    <LateStageItem Include="$(TargetDir)\Mono.Unix.dll" />
     <LateStageitem Include="$(TargetDir)\%2A%2A\System.%2A.dll" />
   </ItemGroup>
   

@@ -359,7 +359,7 @@ def getdoc(object):
     uniformly removed from the second line onwards is removed."""
     try:
         doc = object.__doc__
-    except AttributeError:
+    except (AttributeError, SystemError):
         return None
     if not isinstance(doc, types.StringTypes):
         return None

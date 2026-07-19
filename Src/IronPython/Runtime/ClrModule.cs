@@ -17,6 +17,7 @@ using ComTypeLibDesc = Microsoft.Scripting.ComInterop.ComTypeLibDesc;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -1163,7 +1164,12 @@ import Namespace.")]
             }
 
             string data, format;
-            switch (CompilerHelpers.GetType(self).GetTypeCode()) {
+            Type type = CompilerHelpers.GetType(self);
+            if (type.IsEnum) {
+                Type underlyingType = Enum.GetUnderlyingType(type);
+                data = System.Convert.ToString(System.Convert.ChangeType(self, underlyingType, CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
+                format = "enum:" + type.AssemblyQualifiedName;
+            } else switch (type.GetTypeCode()) {
                 // for the primitive non-python types just do a simple
                 // serialization
                 case TypeCode.Byte:
@@ -1206,6 +1212,15 @@ import Namespace.")]
         /// </summary>
         public static object Deserialize(string serializationFormat, [NotNull]string/*!*/ data) {
             if (serializationFormat != null) {
+                const string enumPrefix = "enum:";
+                if (serializationFormat.StartsWith(enumPrefix, StringComparison.Ordinal)) {
+                    Type enumType = Type.GetType(serializationFormat.Substring(enumPrefix.Length), false);
+                    if (enumType == null || !enumType.IsEnum) {
+                        throw PythonOps.ValueError("unknown serialization format: {0}", serializationFormat);
+                    }
+                    object value = System.Convert.ChangeType(data, Enum.GetUnderlyingType(enumType), CultureInfo.InvariantCulture);
+                    return Enum.ToObject(enumType, value);
+                }
                 switch (serializationFormat) {
                     case "System.Byte": return Byte.Parse(data);
                     case "System.Char": return Char.Parse(data);

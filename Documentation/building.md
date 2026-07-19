@@ -1,6 +1,6 @@
-# Building IronPython2
+# Building IronPython 2
 
-To build IronPython2 you will need the .NET SDK (minimum 4.5), a [.NET Core SDK (minimum 3.1)](https://dotnet.microsoft.com/download/visual-studio-sdks) and if building on Linux/macOS you will need [Mono](https://mono-project.com).
+The build requires the .NET 10 SDK. Linux and macOS builds also require [Mono](https://mono-project.com) for `mcs`, `vbc`, and `ilasm`, plus [PowerShell](https://github.com/PowerShell/PowerShell/releases).
 
 See [Getting the Sources](getting-the-sources.md) for information on getting the source for IronPython2.
 
@@ -16,9 +16,16 @@ Visual Studio 16.4(2019) or above is required to build IronPython2
 
 IronPython2 uses PowerShell to run the build and testing from the command line. You can either use a PowerShell directly, or prefix the commands below with `powershell` on Windows, or `pwsh` on Linux/macOS. 
 
-On Linux/macOS you will need to install [PowerShell](https://github.com/PowerShell/PowerShell/releases)
+On macOS, the required ARM64 or x64 tools can be installed with Homebrew:
 
-Change the working directory to the path where you cloned the sources and run `.\make.ps1`
+```sh
+brew install dotnet mono powershell
+git submodule update --init
+```
+
+The Mono compiler and assembler commands must be discoverable through `PATH`.
+
+Change the working directory to the path where you cloned the sources and run `.\make.ps1` on Windows or `./make.ps1` on Linux/macOS.
 
 By default, with no options, make.ps1 will build Release mode binaries. If you would like to build debug binaries, you can run `.\make.ps1 debug`
 
@@ -26,7 +33,7 @@ Other options available for `make.ps1` are
 
 ```
 -configuration (debug/release)   The configuration to build for
--platform (x86/x64)              The platform to use in running tests
+-platform (x86/x64/Arm64)        The platform to use in running tests; detected automatically
 -runIgnored                      Run tests that are marked as ignored in the .ini manifests
 -frameworks                      A comma separated list of frameworks to run tests for 
                                  (use nomenclature as is used in msbuild files for TargetFrameworks)
@@ -42,4 +49,14 @@ test-*                          Runs tests from `all` categories, `ironpython` s
                                 set of tests
 ```
 
-If the build is successful the binaries are stored in ironpython2/bin/{ConfigurationName}/{Framework}
+If the build is successful, binaries are stored in `ironpython2/bin/{ConfigurationName}/{Framework}`. The macOS launcher is `bin/Release/net10.0/ipy`.
+
+For a release build, smoke test, and distribution containing the complete Python standard library:
+
+```sh
+./make.ps1 clean
+./make.ps1 release
+./make.ps1 test-smoke
+./make.ps1 stage
+Package/Release/Stage/IronPython-*/net10.0/ipy -c 'import sys; print(sys.version)'
+```

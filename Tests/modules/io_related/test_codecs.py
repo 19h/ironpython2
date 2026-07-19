@@ -389,8 +389,12 @@ class CodecTest(IronPythonTestCase):
         try:
             #positive cases
             for coding in ip_supported_encodings:
-                if coding.lower().replace(" ", "-")=="utf-16-be":
+                normalized_coding = coding.lower().replace(" ", "-")
+                if normalized_coding == "utf-16-be":
                     print "https://github.com/IronLanguages/ironpython2/issues/3"
+                    continue
+                if is_netcoreapp and normalized_coding == "utf-7":
+                    # Modern .NET disables UTF-7 in the source-file encoding provider.
                     continue
                 temp_mod_name = "test_encoding_" + coding.replace("-", "_").replace(" ", "_")
                 f = open(os.path.join(self.temporary_dir, "tmp_encodings", temp_mod_name + ".py"), "w")

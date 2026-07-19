@@ -42,7 +42,8 @@ namespace IronPython.Modules {
 
         internal static string PreferredEncoding {
             get {
-                return "cp" + CultureInfo.CurrentCulture.TextInfo.ANSICodePage.ToString();
+                int codePage = CultureInfo.CurrentCulture.TextInfo.ANSICodePage;
+                return codePage == 0 ? "UTF-8" : "cp" + codePage.ToString(CultureInfo.InvariantCulture);
             }
         }
 

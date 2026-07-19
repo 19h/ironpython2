@@ -27,7 +27,7 @@ class ProcessUtil(object):
 
     def run_csc(self, args):
         if is_osx:
-            return self.run_tool("/Library/Frameworks/Mono.framework/Versions/Current/Commands/mcs", args)
+            return self.run_tool("mcs", args)
         elif is_posix:
             return self.run_tool("/usr/bin/mcs", args)
         else:
@@ -35,7 +35,10 @@ class ProcessUtil(object):
 
     def run_vbc(self, args):
         if is_osx:
-            return self.run_tool("/Library/Frameworks/Mono.framework/Versions/Current/Commands/vbnc", args)
+            mono_reference_path = self._get_mono_reference_path("vbc")
+            if mono_reference_path:
+                args = '/sdkpath:"%s" %s' % (mono_reference_path, args)
+            return self.run_tool("vbc", args)
         elif is_posix:
             return self.run_tool("/usr/bin/vbnc", args)
         else:
@@ -43,7 +46,7 @@ class ProcessUtil(object):
 
     def run_ilasm(self, args):
         if is_osx:
-            return self.run_tool("/Library/Frameworks/Mono.framework/Versions/Current/Commands/ilasm", args)
+            return self.run_tool("ilasm", args)
         elif is_posix:
             return self.run_tool("/usr/bin/ilasm", args)
         else:
@@ -65,6 +68,16 @@ class ProcessUtil(object):
         process.Start()
         process.WaitForExit()
         return process.ExitCode
+
+    def _get_mono_reference_path(self, executable):
+        for directory in os.environ.get("PATH", "").split(os.pathsep):
+            candidate = os.path.join(directory, executable)
+            if os.path.isfile(candidate):
+                prefix = os.path.dirname(os.path.dirname(os.path.realpath(candidate)))
+                reference_path = os.path.join(prefix, "lib", "mono", "4.8-api")
+                if os.path.isdir(reference_path):
+                    return reference_path
+        return None
     
     def launch(self, executable, *params):
         l = [ executable ] + list(params)
@@ -162,5 +175,3 @@ class ProcessUtil(object):
 
 # def kill_process(arg):
 #     return run_tool("taskkill.exe", '/F /IM %s' % arg)
-
-

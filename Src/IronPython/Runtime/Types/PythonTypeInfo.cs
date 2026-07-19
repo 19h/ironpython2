@@ -614,6 +614,10 @@ namespace IronPython.Runtime.Types {
 #if FEATURE_SERIALIZATION
                 new OneOffResolver("__reduce_ex__", SerializationResolver),
 #endif
+                // Newer System.Numerics.BigInteger versions define static generic-math
+                // methods with these names. Preserve the instance extension methods.
+                new OneOffResolver("IsNegative", BigIntegerIsNegativeResolver),
+                new OneOffResolver("IsPositive", BigIntegerIsPositiveResolver),
                 // The standard resolver looks for types using .NET reflection by name
                 new StandardResolver(), 
                 
@@ -674,6 +678,23 @@ namespace IronPython.Runtime.Types {
                 // Support binding to private members if the user has enabled that feature
                 new PrivateBindingResolver(),
             };
+        }
+
+        private static MemberGroup/*!*/ BigIntegerIsNegativeResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
+            return GetBigIntegerSignMember(type, nameof(BigIntegerOps.IsNegative));
+        }
+
+        private static MemberGroup/*!*/ BigIntegerIsPositiveResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
+            return GetBigIntegerSignMember(type, nameof(BigIntegerOps.IsPositive));
+        }
+
+        private static MemberGroup/*!*/ GetBigIntegerSignMember(Type/*!*/ type, string/*!*/ name) {
+            if (type != typeof(BigInteger)) {
+                return MemberGroup.EmptyGroup;
+            }
+
+            MethodInfo method = typeof(BigIntegerOps).GetMethod(name, BindingFlags.Public | BindingFlags.Static);
+            return new MemberGroup(MethodTracker.FromMemberInfo(method, type));
         }
 
         #endregion

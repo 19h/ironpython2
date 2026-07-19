@@ -92,9 +92,23 @@ class MethodBinder1Test(IronPythonTestCase):
     
     def test_this_matrix(self):
         '''This will test the full matrix.'''
+        import clr
         from IronPythonTest.BinderTest import Flag
         # To print the matrix, enable the following flag
         print_the_matrix = False
+
+        bigint_type = clr.GetClrType(long)
+        complex_type = clr.GetClrType(complex)
+        bigint_conversion_types = set(
+            method.GetParameters()[0].ParameterType
+            for method in bigint_type.GetMethods()
+            if method.Name in ("op_Explicit", "op_Implicit") and
+               method.ReturnType == bigint_type and
+               len(method.GetParameters()) == 1)
+        has_complex_to_bigint = complex_type in bigint_conversion_types
+        complex_to_bigint = True if has_complex_to_bigint else TypeE
+        nonreal_complex_to_bigint = OverF if has_complex_to_bigint else TypeE
+        char_to_bigint = True if clr.GetClrType(System.Char) in bigint_conversion_types else TypeE
 
 
         funcnames =     "M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400".split()
@@ -167,9 +181,9 @@ class MethodBinder1Test(IronPythonTestCase):
     ##################################################  pass in Complex #########################################################
     ####                 M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
     ####                 int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj
-    (            (3+0j), TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
-    (            (3+1j), TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
-    (        mycomplex1, TypeE, TypeE, TypeE, TypeE, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  )
+    (            (3+0j), TypeE, TypeE, TypeE, complex_to_bigint,         True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
+    (            (3+1j), TypeE, TypeE, TypeE, nonreal_complex_to_bigint, True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  ),
+    (        mycomplex1, TypeE, TypeE, TypeE, complex_to_bigint,         True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  )
         )
 
         
@@ -178,7 +192,7 @@ class MethodBinder1Test(IronPythonTestCase):
         ##################################################  pass in char    #########################################################
         ####                                     M201   M680   M202   M203   M204   M205   M301   M302   M303   M304   M310   M311   M312   M313   M320   M321   M400
         ####                                     int    int?   double bigint bool   str    sbyte  i16    i64    single byte   ui16   ui32   ui64   char   decm   obj
-        matrix.append((System.Char.Parse('A'), TypeE, TypeE, TypeE, TypeE, True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  True, True,  ))
+        matrix.append((System.Char.Parse('A'), TypeE, TypeE, TypeE, char_to_bigint, True,  True,  TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, TypeE, True,  True, True,  ))
         
         ##################################################  pass in float   #########################################################
         ####    single/double becomes Int32, but this does not apply to other primitive types
@@ -1154,4 +1168,3 @@ IListInt Array IEnumerableInt IEnumeratorInt NullableInt
     
 
 run_test(__name__)
-

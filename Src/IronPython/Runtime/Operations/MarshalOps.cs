@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 
 using IronPython.Runtime;
@@ -527,7 +528,7 @@ namespace IronPython.Runtime.Operations {
                 string str = DecodeString (PythonAsciiEncoding.Instance, ReadBytes (_myBytes.Current));
 
                 double res = 0;
-                if (double.TryParse (str, out res)) {
+                if (double.TryParse (str, NumberStyles.Float, CultureInfo.InvariantCulture, out res)) {
                     return res;
                 }
                 return 0;
