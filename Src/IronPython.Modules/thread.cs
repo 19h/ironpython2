@@ -64,12 +64,16 @@ namespace IronPython.Modules {
         /// or other .NET code.  
         /// </summary>
         public static void interrupt_main(CodeContext context) {
+#if NET10_0_OR_GREATER
+            throw PythonOps.NotImplementedError("thread.interrupt_main is unavailable because .NET 10 does not support Thread.Abort");
+#else
             var thread = context.LanguageContext.MainThread;
             if (thread != null) {
                 thread.Abort(new KeyboardInterruptException(""));
             } else {
                 throw PythonOps.SystemError("no main thread has been registered");
             }
+#endif
         }
 #endif
 

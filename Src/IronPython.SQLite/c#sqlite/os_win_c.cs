@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using Microsoft.Win32.SafeHandles;
 using DWORD = System.UInt64;
 using HANDLE = System.IntPtr;
 using i64 = System.Int64;
@@ -127,7 +128,27 @@ BOOL bExclusive;    /* Indicates an exclusive lock has been obtained */
 } winceLock;
 #endif
 
-    private static LockingStrategy lockingStrategy = HelperMethods.IsRunningMediumTrust() ? new MediumTrustLockingStrategy() : new LockingStrategy();
+    private static LockingStrategy lockingStrategy = CreateLockingStrategy();
+
+    private static LockingStrategy CreateLockingStrategy()
+    {
+      if (IsDarwinPlatform())
+      {
+        return new DarwinLockingStrategy();
+      }
+
+      return HelperMethods.IsRunningMediumTrust() ? new MediumTrustLockingStrategy() : new LockingStrategy();
+    }
+
+    private static bool IsDarwinPlatform()
+    {
+#if NET45
+      return Environment.OSVersion.Platform == PlatformID.MacOSX
+        || (Environment.OSVersion.Platform == PlatformID.Unix && Directory.Exists("/System/Library/CoreServices"));
+#else
+      return RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+#endif
+    }
 
     /*
     ** The winFile structure is a subclass of sqlite3_file* specific to the win32
@@ -225,7 +246,9 @@ static int sqlite3_os_type = 0;
       //  sqlite3_os_type = sInfo.dwPlatformId == VER_PLATFORM_WIN32_NT ? 2 : 1;
       //}
       //return sqlite3_os_type == 2;
-      return Environment.OSVersion.Platform == PlatformID.Win32NT;
+      // The managed FileStream implementation used by this port is also the
+      // applicable I/O path on Unix. Only the legacy Win9x branch is excluded.
+      return Environment.OSVersion.Platform == PlatformID.Win32NT || Path.DirectorySeparatorChar == '/';
     }
 #endif // * SQLITE_OS_WINCE */
 
@@ -2644,7 +2667,7 @@ int isTemp = 0;
 
       // /* Convert the filename to the system encoding. */
       zConverted = zUtf8Name;// convertUtf8Filename( zUtf8Name );
-      if ( zConverted.StartsWith( "/" ) && !zConverted.StartsWith( "//" ) )
+      if ( Path.DirectorySeparatorChar == '\\' && zConverted.StartsWith( "/" ) && !zConverted.StartsWith( "//" ) )
         zConverted = zConverted.Substring( 1 );
       //if ( String.IsNullOrEmpty( zConverted ) )
       //{
@@ -2768,7 +2791,14 @@ dwFlagsAndAttributes |= FileOptions.RandomAccess; // FILE_FLAG_RANDOM_ACCESS;
 #elif WINDOWS_PHONE || SQLITE_SILVERLIGHT  
  fs = new IsolatedStorageFileStream(zConverted, dwCreationDisposition, dwDesiredAccess, dwShareMode, IsolatedStorageFile.GetUserStoreForApplication());
 #elif !(SQLITE_SILVERLIGHT || WINDOWS_MOBILE)
-            fs = new FileStream( zConverted, dwCreationDisposition, dwDesiredAccess, dwShareMode, 4096, dwFlagsAndAttributes );
+            if (IsDarwinPlatform())
+            {
+              fs = DarwinLockingStrategy.OpenFile(zConverted, dwCreationDisposition, dwDesiredAccess, isDelete);
+            }
+            else
+            {
+              fs = new FileStream( zConverted, dwCreationDisposition, dwDesiredAccess, dwShareMode, 4096, dwFlagsAndAttributes );
+            }
 #else
             fs = new FileStream( zConverted, dwCreationDisposition, dwDesiredAccess, dwShareMode, 4096);
 #endif
@@ -3762,6 +3792,145 @@ Debug.Assert(winSysInfo.dwAllocationGranularity > 0);
 #if !(SQLITE_SILVERLIGHT || WINDOWS_MOBILE || SQLITE_WINRT)
         pFile.fs.Unlock( offset, length );
 #endif
+      }
+    }
+
+    /// <summary>
+    /// Darwin does not support FileStream.Lock. Open-file-description locks
+    /// preserve SQLite's per-handle byte-range locking semantics, including
+    /// for multiple connections in the same process.
+    /// </summary>
+    private sealed class DarwinLockingStrategy : LockingStrategy
+    {
+      private const int F_OFD_SETLK = 90;
+      private const short F_RDLCK = 1;
+      private const short F_UNLCK = 2;
+      private const short F_WRLCK = 3;
+      private const short SEEK_SET = 0;
+
+      private const int O_RDONLY = 0x0000;
+      private const int O_WRONLY = 0x0001;
+      private const int O_RDWR = 0x0002;
+      private const int O_APPEND = 0x0008;
+      private const int O_CREAT = 0x0200;
+      private const int O_TRUNC = 0x0400;
+      private const int O_EXCL = 0x0800;
+      private const int O_CLOEXEC = 0x01000000;
+      private const int DefaultCreateMode = 438; // 0666, restricted by the process umask
+
+      [StructLayout(LayoutKind.Sequential)]
+      private struct Flock
+      {
+        internal long Start;
+        internal long Length;
+        internal int ProcessId;
+        internal short Type;
+        internal short Whence;
+      }
+
+      // __fcntl has a fixed third argument, unlike the variadic fcntl wrapper.
+      // A fixed entry point is required by the Darwin arm64 ABI for P/Invoke.
+      [DllImport("libc", EntryPoint = "__fcntl", SetLastError = true)]
+      private static extern int Fcntl(int fileDescriptor, int command, ref Flock fileLock);
+
+      // __open likewise exposes the fixed three-argument syscall wrapper.
+      [DllImport("libc", EntryPoint = "__open", SetLastError = true)]
+      private static extern int Open([MarshalAs(UnmanagedType.LPStr)] string path, int flags, int mode);
+
+      internal static FileStream OpenFile(string path, FileMode mode, FileAccess access, bool deleteOnClose)
+      {
+        int flags = O_CLOEXEC;
+        switch (access)
+        {
+          case FileAccess.Read:
+            flags |= O_RDONLY;
+            break;
+          case FileAccess.Write:
+            flags |= O_WRONLY;
+            break;
+          default:
+            flags |= O_RDWR;
+            break;
+        }
+
+        switch (mode)
+        {
+          case FileMode.CreateNew:
+            flags |= O_CREAT | O_EXCL;
+            break;
+          case FileMode.Create:
+            flags |= O_CREAT | O_TRUNC;
+            break;
+          case FileMode.OpenOrCreate:
+            flags |= O_CREAT;
+            break;
+          case FileMode.Truncate:
+            flags |= O_TRUNC;
+            break;
+          case FileMode.Append:
+            flags |= O_CREAT | O_APPEND;
+            break;
+        }
+
+        int fileDescriptor = Open(path, flags, DefaultCreateMode);
+        if (fileDescriptor == -1)
+        {
+          throw new IOException(String.Format("open('{0}') failed with errno {1}.", path, Marshal.GetLastWin32Error()));
+        }
+
+        var handle = new SafeFileHandle(new IntPtr(fileDescriptor), true);
+        try
+        {
+          var stream = new FileStream(handle, access, 4096, false);
+          if (deleteOnClose)
+          {
+            File.Delete(path);
+          }
+          return stream;
+        }
+        catch
+        {
+          handle.Dispose();
+          throw;
+        }
+      }
+
+      private static int SetLock(sqlite3_file pFile, long offset, long length, short type)
+      {
+        var fileLock = new Flock {
+          Start = offset,
+          Length = length,
+          ProcessId = 0,
+          Type = type,
+          Whence = SEEK_SET
+        };
+        int fileDescriptor = unchecked((int)pFile.fs.SafeFileHandle.DangerousGetHandle().ToInt64());
+        return Fcntl(fileDescriptor, F_OFD_SETLK, ref fileLock);
+      }
+
+      private static void SetLockOrThrow(sqlite3_file pFile, long offset, long length, short type)
+      {
+        if (SetLock(pFile, offset, length, type) == -1)
+        {
+          throw new IOException(String.Format(
+            "fcntl(F_OFD_SETLK, type={0}, offset={1}, length={2}) failed with errno {3}.",
+            type, offset, length, Marshal.GetLastWin32Error()));
+        }
+      }
+
+      public override void LockFile(sqlite3_file pFile, long offset, long length)
+      {
+        SetLockOrThrow(pFile, offset, length, F_WRLCK);
+      }
+
+      public override int SharedLockFile(sqlite3_file pFile, long offset, long length)
+      {
+        return SetLock(pFile, offset, length, F_RDLCK) == 0 ? 1 : 0;
+      }
+
+      public override void UnlockFile(sqlite3_file pFile, long offset, long length)
+      {
+        SetLockOrThrow(pFile, offset, length, F_UNLCK);
       }
     }
 

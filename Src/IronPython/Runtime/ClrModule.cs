@@ -1183,11 +1183,16 @@ import Namespace.")]
                 case TypeCode.UInt16:
                 case TypeCode.UInt32:
                 case TypeCode.UInt64:
-                    data = self.ToString();
+                    data = self is IFormattable formattable
+                        ? formattable.ToString(null, CultureInfo.InvariantCulture)
+                        : self.ToString();
                     format = CompilerHelpers.GetType(self).FullName;
                     break;
 
                 default:
+#if NET10_0_OR_GREATER
+                    throw new NotSupportedException("Formatter-based CLR object serialization is unavailable on .NET 10 or later.");
+#else
                     // something more complex, let the binary formatter handle it                    
                     BinaryFormatter bf = new BinaryFormatter();
                     MemoryStream stream = new MemoryStream();
@@ -1195,6 +1200,7 @@ import Namespace.")]
                     data = stream.ToArray().MakeString();
                     format = null;
                     break;
+#endif
             }
 
             return PythonTuple.MakeTuple(format, data);
@@ -1222,17 +1228,17 @@ import Namespace.")]
                     return Enum.ToObject(enumType, value);
                 }
                 switch (serializationFormat) {
-                    case "System.Byte": return Byte.Parse(data);
+                    case "System.Byte": return Byte.Parse(data, NumberStyles.Integer, CultureInfo.InvariantCulture);
                     case "System.Char": return Char.Parse(data);
                     case "System.DBNull": return DBNull.Value;
-                    case "System.Decimal": return Decimal.Parse(data);
-                    case "System.Int16": return Int16.Parse(data);
-                    case "System.Int64": return Int64.Parse(data);
-                    case "System.SByte": return SByte.Parse(data);
-                    case "System.Single": return Single.Parse(data);
-                    case "System.UInt16": return UInt16.Parse(data);
-                    case "System.UInt32": return UInt32.Parse(data);
-                    case "System.UInt64": return UInt64.Parse(data);
+                    case "System.Decimal": return Decimal.Parse(data, NumberStyles.Number, CultureInfo.InvariantCulture);
+                    case "System.Int16": return Int16.Parse(data, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                    case "System.Int64": return Int64.Parse(data, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                    case "System.SByte": return SByte.Parse(data, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                    case "System.Single": return Single.Parse(data, NumberStyles.Float, CultureInfo.InvariantCulture);
+                    case "System.UInt16": return UInt16.Parse(data, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                    case "System.UInt32": return UInt32.Parse(data, NumberStyles.Integer, CultureInfo.InvariantCulture);
+                    case "System.UInt64": return UInt64.Parse(data, NumberStyles.Integer, CultureInfo.InvariantCulture);
                     default:
                         throw PythonOps.ValueError("unknown serialization format: {0}", serializationFormat);
                 }
@@ -1240,9 +1246,34 @@ import Namespace.")]
                 return null;
             }
 
+#if NET10_0_OR_GREATER
+            throw new NotSupportedException("Formatter-based CLR object deserialization is unavailable on .NET 10 or later.");
+#else
             MemoryStream stream = new MemoryStream(data.MakeByteArray());
             BinaryFormatter bf = new BinaryFormatter();
             return bf.Deserialize(stream);
+#endif
+        }
+
+        internal static bool CanSerializeWithoutFormatter(Type type) {
+            if (type.IsEnum) return true;
+
+            switch (type.GetTypeCode()) {
+                case TypeCode.Byte:
+                case TypeCode.Char:
+                case TypeCode.DBNull:
+                case TypeCode.Decimal:
+                case TypeCode.Int16:
+                case TypeCode.Int64:
+                case TypeCode.SByte:
+                case TypeCode.Single:
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                case TypeCode.UInt64:
+                    return true;
+                default:
+                    return false;
+            }
         }
 #endif
     }

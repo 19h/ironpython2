@@ -11,14 +11,10 @@
     </Package>
   </ItemGroup>
 
-  <PropertyGroup>
-    <NuSpecInputs>@(Package->'%(NuSpecDir)/%(Identity).nuspec')</NuSpecInputs>
-    <NuPkgOutputs>@(Package->'$(PackageDir)/%(Identity).$(PackageVersion).nupkg')</NuPkgOutputs>
-  </PropertyGroup>
-
-  <Target Name="NuGetPackage" DependsOnTargets="Stage" AfterTargets="Package"
-          Inputs="$(NuSpecInputs)"
-          Outputs="$(NuPkgOutputs)">
+  <!-- Package is an explicit distribution target. Always recreate NuGet
+       artifacts so rebuilt staged assemblies cannot be hidden by a nuspec-only
+       incremental check. -->
+  <Target Name="NuGetPackage" DependsOnTargets="Stage" AfterTargets="Package">
     <ItemGroup>
       <DLLsFiles Include="**\DLLs\IronPython.*.dll" />
       <DLLsFiles Include="**\DLLs\IronPython.*.pdb" />

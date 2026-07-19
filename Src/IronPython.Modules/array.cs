@@ -158,9 +158,7 @@ namespace IronPython.Modules {
             }
 
             public void byteswap() {
-                Stream s = ToStream();
-                byte[] bytes = new byte[s.Length];
-                s.Read(bytes, 0, bytes.Length);
+                byte[] bytes = ToStream().ToArray();
 
                 byte[] tmp = new byte[itemsize];
                 for (int i = 0; i < bytes.Length; i += itemsize) {
@@ -606,9 +604,7 @@ namespace IronPython.Modules {
             }
 
             public string tostring() {
-                Stream s = ToStream();
-                byte[] bytes = new byte[s.Length];
-                s.Read(bytes, 0, (int)s.Length);
+                byte[] bytes = ToStream().ToArray();
 
                 StringBuilder res = new StringBuilder();
                 for (int i = 0; i < bytes.Length; i++) {

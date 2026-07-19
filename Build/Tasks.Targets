@@ -14,8 +14,7 @@
         try {
           var di = new DirectoryInfo(WorkingDirectory);
           if (!di.Exists) {
-            Log.LogError(string.Format("{0} doesn't exist", WorkingDirectory));
-            return false;
+            throw new DirectoryNotFoundException(string.Format("{0} doesn't exist", WorkingDirectory));
           }
           cwd = Environment.CurrentDirectory;
           Environment.CurrentDirectory = di.FullName;
@@ -26,19 +25,27 @@
               var filename = fileItem.ItemSpec;
               FileInfo fi = new FileInfo(filename);
               if (!fi.FullName.StartsWith(di.FullName)) {
-                Log.LogError(string.Format("{0} not in {1}", filename, WorkingDirectory));
-                return false;
+                throw new InvalidOperationException(string.Format("{0} not in {1}", filename, WorkingDirectory));
               }
               var archivename = fi.FullName.Substring(di.FullName.Length).Replace('\\', '/').TrimStart(new char [] { '/' });
+              ZipArchiveEntry entry = archive.CreateEntry(archivename);
+              string unixMode = fileItem.GetMetadata("UnixMode");
+              if (!string.IsNullOrEmpty(unixMode)) {
+                const int regularFile = 0x8000;
+                int permissions = Convert.ToInt32(unixMode, 8);
+                var externalAttributes = entry.GetType().GetProperty("ExternalAttributes");
+                if (externalAttributes == null || !externalAttributes.CanWrite) {
+                  throw new NotSupportedException("The active ZIP implementation cannot store Unix permissions.");
+                }
+                externalAttributes.SetValue(entry, (regularFile | permissions) << 16, null);
+              }
               using (Stream fileStream = new FileStream(fi.FullName, FileMode.Open, FileAccess.Read))
-              using (Stream fileStreamInZip = archive.CreateEntry(archivename).Open())
+              using (Stream fileStreamInZip = entry.Open())
                 fileStream.CopyTo(fileStreamInZip);
             }
           }
-          return true;
         } catch (Exception ex) {
           Log.LogErrorFromException(ex);
-          return false;
         } finally {
           if (cwd != null) {
             Environment.CurrentDirectory = cwd;
@@ -70,9 +77,7 @@
           }
         } catch(Exception ex) {
           Log.LogErrorFromException(ex);
-          return false;
         }
-        return true;
         ]]>
       </Code>
     </Task>

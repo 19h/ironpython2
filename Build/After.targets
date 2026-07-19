@@ -4,10 +4,10 @@
     <When Condition=" '$(OutputType)' == 'Library' ">
       <ItemGroup>
         <StageItem Include="$(TargetPath)" />
-        <StageItem Include="$(DocumentationFile)" />
-        <StageItem Include="$(PdbFile)" />
-        <StageItem Include="$(TargetDir)$(TargetName).xml" Condition=" Exists('$(TargetDir)$(TargetName).xml') " />
-        <StageItem Include="$(TargetDir)$(TargetName).pdb" Condition=" Exists('$(TargetDir)$(TargetName).pdb') " />
+        <StageItem Include="$(DocumentationFile)" Condition=" '$(DocumentationFile)' != '' and Exists('$(DocumentationFile)') " />
+        <StageItem Include="$(PdbFile)" Condition=" '$(PdbFile)' != '' and Exists('$(PdbFile)') " />
+        <StageItem Include="$(TargetDir)$(TargetName).xml" Condition=" '$(DocumentationFile)' == '' and Exists('$(TargetDir)$(TargetName).xml') " />
+        <StageItem Include="$(TargetDir)$(TargetName).pdb" Condition=" '$(PdbFile)' == '' and Exists('$(TargetDir)$(TargetName).pdb') " />
       </ItemGroup>
     </When>
     <When Condition=" '$(OutputType)' == 'Exe' or '$(OutputType)' == 'WinExe' ">
@@ -48,4 +48,3 @@
 
   <Target Name="Stage" DependsOnTargets="_LateStage;_MainStage;_StoreInDLLs" />
 </Project>
-

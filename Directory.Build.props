@@ -14,6 +14,9 @@
          additional assembly references. -->
     <NoConfig>true</NoConfig>
     <AddAdditionalExplicitAssemblyReferences>false</AddAdditionalExplicitAssemblyReferences>
+    <!-- .NET 10 enables direct PackageReference pruning when any project TFM is
+         net10.0. Keep the package assets required by legacy inner builds. -->
+    <RestoreEnablePackagePruning>false</RestoreEnablePackagePruning>
 
     <AssemblyFileRevision Condition="'$(ReleaseLevel)' == 'alpha'">000$(ReleaseSerial)</AssemblyFileRevision>
     <AssemblyFileRevision Condition="'$(ReleaseLevel)' == 'beta'">00$(ReleaseSerial)0</AssemblyFileRevision>
@@ -104,7 +107,7 @@
     <OutputPath>$(BaseOutputPath)</OutputPath>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningsNotAsErrors>618;429;219;1717;162;414</WarningsNotAsErrors>
-    <NoWarn>1591;1584;1574;1685;1573</NoWarn>
+    <NoWarn>$(NoWarn);1591;1584;1574;1685;1573</NoWarn>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -115,7 +118,8 @@
 
   <!-- Release -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <DebugSymbols>false</DebugSymbols>
+    <!-- NuGetPackage emits a portable symbol package for Release builds. -->
+    <DebugSymbols>true</DebugSymbols>
     <DebugType>portable</DebugType>
     <Optimize>true</Optimize>
     <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>

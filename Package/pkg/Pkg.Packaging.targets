@@ -5,43 +5,27 @@
     <!-- We need to create the directory structure we want to package -->
     <PropertyGroup>
       <TempFolder>temp</TempFolder>
-      <PackageDebFolder>Package/pkg</PackageDebFolder>
-      <PackageTempFolder>$(PackageDebFolder)/$(TempFolder)</PackageTempFolder>
+      <PackagePkgFolder>Package/pkg</PackagePkgFolder>
+      <PackageTempFolder>$(PackagePkgFolder)/$(TempFolder)</PackageTempFolder>
       <PackageLayoutRootDir>$(PackageTempFolder)/Library/Frameworks/IronPython.framework/Versions/$(PackageVersion)</PackageLayoutRootDir>
     </PropertyGroup>
 
     <ItemGroup>
       <StdLibFiles Include="$(StageDir)/Lib/**/*.*" />
+      <ApplicationFiles Include="$(StageDir)/net10.0/**/*.*"
+                        Exclude="$(StageDir)/net10.0/**/IronPythonTest.*;$(StageDir)/net10.0/**/*.pdb" />
     </ItemGroup>
 
-    <ItemGroup>
-      <ApplicationFiles Include="$(StageDir)/net45/*.exe" />
-      <ApplicationFiles Include="$(StageDir)/net45/*.dll" Exclude="IronPythonTest.dll" />      
-    </ItemGroup>
-
-    <ItemGroup>
-      <DLLFiles Include="$(StageDir)/net45/DLLs/*.dll" />
-    </ItemGroup>
-
-    <Exec Command="chmod 777 $(StageDir)/net45/*.exe" />
-    <Exec Command="rm -rf $(PackageTempFolder)" />
-    <Exec Command="mkdir -p $(PackageTempFolder)" />
-
-    <ItemGroup>
-      <StdLibOutputFiles Include="$(StageDir)/Lib/**/*.py" />
-    </ItemGroup>
-
-    <!-- Change line endings of the .py files -->
-    <Exec Command="$(MSBuildThisFileDirectory)dos2unix.sh %(StdLibOutputFiles.Identity)" />
-
+    <RemoveDir Directories="$(PackageTempFolder)" Condition="Exists('$(PackageTempFolder)')" />
+    <MakeDir Directories="$(PackageLayoutRootDir)/bin;$(PackageLayoutRootDir)/Lib;$(PackageDir)" />
     <Copy SourceFiles="@(ApplicationFiles)" DestinationFolder="$(PackageLayoutRootDir)/bin/%(ApplicationFiles.RecursiveDir)"/>
-    <Copy SourceFiles="@(StdLibFiles)" DestinationFolder="$(PackageLayoutRootDir)/lib/%(StdLibFiles.RecursiveDir)"/>
-    <Copy SourceFiles="@(DLLFiles)" DestinationFolder="$(PackageLayoutRootDir)/DLLs" />
+    <Copy SourceFiles="@(StdLibFiles)" DestinationFolder="$(PackageLayoutRootDir)/Lib/%(StdLibFiles.RecursiveDir)"/>
+    <Exec Command="chmod 755 &quot;$(PackageLayoutRootDir)/bin/ipy&quot; &quot;$(PackageLayoutRootDir)/bin/ipy.sh&quot;" />
 
-    <Exec Command="pkgbuild --root $(PackageTempFolder) --identifier 'org.dotnet.ironpython27' --version '$(PackageVersion)' $(PackageDir)/IronPython-$(PackageVersion).pkg" />
+    <Exec Command="pkgbuild --root &quot;$(PackageTempFolder)&quot; --identifier 'org.dotnet.ironpython27' --version '$(PackageVersion)' &quot;$(PackageDir)/IronPython-$(PackageVersion).pkg&quot;" />
 
     <!-- cleanup the directory -->
-    <Exec Command="rm -rf $(PackageTempFolder)" />
+    <RemoveDir Directories="$(PackageTempFolder)" />
 
   </Target>
 </Project>

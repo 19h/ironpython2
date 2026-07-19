@@ -1169,12 +1169,16 @@ namespace IronPython.Runtime {
             get {
                 // no locks works here, we either return an
                 // old item (as if we were called first) or return
-                // a current item...        
+                // a current item. Read the size before the backing array:
+                // a concurrent grow publishes a larger array before it
+                // increments _size. Reading these in the opposite order can
+                // pair the old array with the new size and index past the end.
+                int size = Volatile.Read(ref _size);
+                object[] data = GetData();
 
-                // force reading the array first, _size can change after
-                object[] data = GetData();  
-
-                return data[PythonOps.FixIndex(index, _size)];
+                // Other operations can replace the array while shrinking the
+                // list. Clamp the snapshot so every observed pair is bounded.
+                return data[PythonOps.FixIndex(index, Math.Min(size, data.Length))];
             }
             set {
                 // but we need a lock here incase we're assigning

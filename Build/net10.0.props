@@ -2,6 +2,9 @@
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <IsFullFramework>false</IsFullFramework>
+    <!-- Formatter-based exception serialization remains in the public type
+         shape for compatibility, but is obsolete in current .NET. -->
+    <NoWarn>$(NoWarn);0672;SYSLIB0001;SYSLIB0028;SYSLIB0039;SYSLIB0050;SYSLIB0051;SYSLIB0057;SYSLIB0058;CA1416</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -21,7 +24,6 @@
     <Features>$(Features);FEATURE_DRIVENOTFOUNDEXCEPTION</Features>
     <Features>$(Features);FEATURE_DYNAMIC_EXPRESSION_VISITOR</Features>
     <Features>$(Features);FEATURE_ENCODING</Features>
-    <Features>$(Features);FEATURE_EXCEPTION_STATE</Features>
     <Features>$(Features);FEATURE_FILESYSTEM</Features>
     <Features>$(Features);FEATURE_FULL_CONSOLE</Features>
     <Features>$(Features);FEATURE_FULL_CRYPTO</Features>

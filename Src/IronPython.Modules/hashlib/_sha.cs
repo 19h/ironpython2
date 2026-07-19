@@ -85,7 +85,7 @@ namespace IronPython.Modules {
             }
 
             protected override void CreateHasher() {
-                _hasher = new SHA1Managed();
+                _hasher = SHA1.Create();
             }
 
             [Documentation("copy() -> object (copy of this object)")]

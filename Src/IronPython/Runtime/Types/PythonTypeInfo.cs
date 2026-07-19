@@ -835,7 +835,11 @@ namespace IronPython.Runtime.Types {
 
 #if FEATURE_SERIALIZATION
         private static MemberGroup/*!*/ SerializationResolver(MemberBinder/*!*/ binder, Type/*!*/ type) {
+#if NET10_0_OR_GREATER
+            if (ClrModule.CanSerializeWithoutFormatter(type) && !PythonBinder.IsPythonType(type)) {
+#else
             if (type.IsSerializable && !PythonBinder.IsPythonType(type)) {
+#endif
 
                 string methodName = "__reduce_ex__";
 

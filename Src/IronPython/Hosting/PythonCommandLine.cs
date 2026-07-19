@@ -285,19 +285,33 @@ namespace IronPython.Hosting {
         }
 
         /// <summary>
-        /// Loads any extension DLLs present in sys.prefix\DLLs directory and adds references to them.
+        /// Loads extension DLLs present in sys.prefix\DLLs or beside the executable in DLLs,
+        /// and adds references to them.
         /// 
         /// This provides an easy drop-in location for .NET assemblies which should be automatically referenced
         /// (exposed via import), COM libraries, and pre-compiled Python code.
         /// </summary>
         private void InitializeExtensionDLLs() {
-            string dir = Path.Combine(PythonContext.InitialPrefix, "DLLs");
-            if (Directory.Exists(dir)) {
-                foreach (string file in Directory.EnumerateFiles(dir, "*.dll")) {
-                    if (file.ToLower().EndsWith(".dll")) {
-                        try {
-                            ClrModule.AddReferenceToFile(PythonContext.SharedContext, new FileInfo(file).Name);
-                        } catch {
+            var extensionDirectories = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+                Path.Combine(PythonContext.InitialPrefix, "DLLs")
+            };
+
+            Assembly entryAssembly = Assembly.GetEntryAssembly();
+            if (entryAssembly != null && !String.IsNullOrEmpty(entryAssembly.Location)) {
+                string entryDirectory = Path.GetDirectoryName(entryAssembly.Location);
+                if (!String.IsNullOrEmpty(entryDirectory)) {
+                    extensionDirectories.Add(Path.Combine(entryDirectory, "DLLs"));
+                }
+            }
+
+            foreach (string dir in extensionDirectories) {
+                if (Directory.Exists(dir)) {
+                    foreach (string file in Directory.EnumerateFiles(dir, "*.dll")) {
+                        if (file.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) {
+                            try {
+                                ClrModule.AddReferenceToFileAndPath(PythonContext.SharedContext, file);
+                            } catch {
+                            }
                         }
                     }
                 }

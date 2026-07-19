@@ -97,7 +97,9 @@ namespace IronPython.Modules {
         /// <summary>
         /// Allocates memory that's zero-filled
         /// </summary>
+#if !NET10_0_OR_GREATER
         [ReliabilityContract(Consistency.WillNotCorruptState, Cer.MayFail)]
+#endif
         public static IntPtr Calloc(IntPtr size) {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
                 RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
@@ -115,7 +117,10 @@ namespace IronPython.Modules {
             return Marshal.GetFunctionPointerForDelegate(_setMem);
         }
 
-        [DllImport("kernel32.dll"), ReliabilityContract(Consistency.WillNotCorruptState, Cer.MayFail)]
+        [DllImport("kernel32.dll")]
+#if !NET10_0_OR_GREATER
+        [ReliabilityContract(Consistency.WillNotCorruptState, Cer.MayFail)]
+#endif
         private static extern IntPtr LocalAlloc(uint flags, IntPtr size);
 
         [DllImport("libc")]

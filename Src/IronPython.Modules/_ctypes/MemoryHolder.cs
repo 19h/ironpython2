@@ -30,11 +30,15 @@ namespace IronPython.Modules {
         /// <summary>
         /// Creates a new MemoryHolder and allocates a buffer of the specified size.
         /// </summary>
+#if !NET10_0_OR_GREATER
         [ReliabilityContract(Consistency.WillNotCorruptState, Cer.MayFail)]
+#endif
         public MemoryHolder(int size) {
+#if !NET10_0_OR_GREATER
             RuntimeHelpers.PrepareConstrainedRegions();
             try {
             } finally {
+#endif
                 _size = size;
                 _data = NativeFunctions.Calloc(new IntPtr(size));
                 if (_data == IntPtr.Zero) {
@@ -42,7 +46,9 @@ namespace IronPython.Modules {
                     throw new OutOfMemoryException();
                 }
                 _ownsData = true;
+#if !NET10_0_OR_GREATER
             }
+#endif
         }
 
         /// <summary>
@@ -301,7 +307,9 @@ namespace IronPython.Modules {
             GC.KeepAlive(this);
         }
 
+#if !NET10_0_OR_GREATER
         [ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
+#endif
         ~MemoryHolder() {
             if (_ownsData) {
                 Marshal.FreeHGlobal(_data);
