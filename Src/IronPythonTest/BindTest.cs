@@ -130,6 +130,11 @@ namespace IronPythonTest {
                 case "null": return null;
 #if FEATURE_COM
                 case "com":
+#if NETCOREAPP
+                    if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                        throw new PlatformNotSupportedException("COM activation is only available on Windows.");
+                    }
+#endif
                     Type t = Type.GetTypeFromProgID("JScript");
                     return Activator.CreateInstance(t);
 #endif

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net45;netcoreapp2.1;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>net462;net10.0</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,7 +15,7 @@
 
   <ItemGroup>
     <PackageReference Include="NUnitLite" Version="3.12.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.6.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageReference Include="NUnit3TestAdapter" Version="3.16.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -38,8 +38,8 @@
 
   <Target Name="CopyRowanTestFiles" AfterTargets="AfterBuild">
     <ItemGroup>
-      <RowanTestFiles Include="..\DLR\bin\$(Configuration)\$(TargetFramework)\rowantest.*.dll" Condition=" '$(TargetFramework)' == 'net45' " />
-      <RowanTestFiles Include="..\DLR\bin\$(Configuration)\netstandard2.0\rowantest.*.dll" Condition=" '$(TargetFramework)' != 'net45' " />
+      <RowanTestFiles Include="..\DLR\bin\$(Configuration)\net45\rowantest.*.dll" Condition=" '$(IsFullFramework)' == 'true' " />
+      <RowanTestFiles Include="..\DLR\bin\$(Configuration)\netstandard2.0\rowantest.*.dll" Condition=" '$(IsFullFramework)' != 'true' " />
     </ItemGroup>
     <Copy SourceFiles="@(RowanTestFiles)" DestinationFolder="$(TargetDir)" />
   </Target>

@@ -4,12 +4,16 @@ Param(
     [Parameter(Position=1)]
     [String] $target = "release",
     [String] $configuration = "Release",
-    [String[]] $frameworks=@('net45','netcoreapp2.1','netcoreapp3.1'),
-    [String] $platform = "x64",
+    [String[]] $frameworks=@('net10.0'),
+    [String] $platform = "",
     [switch] $runIgnored
 )
 
 $ErrorActionPreference="Continue"
+
+if([String]::IsNullOrWhiteSpace($platform)) {
+    $platform = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
+}
 
 [int] $global:Result = 0
 [bool] $global:isUnix = [System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Unix

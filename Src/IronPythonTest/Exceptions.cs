@@ -46,7 +46,9 @@ namespace IronPythonTest {
             try {
                 CallVirtual();
             } catch (Exception e) {
+#pragma warning disable CA2200 // Deliberately exercise "throw exception" separately from "throw" below.
                 throw e;
+#pragma warning restore CA2200
             }
             return null;
         }
